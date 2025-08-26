@@ -130,20 +130,33 @@
 
         // Event Listeners
         window.addEventListener('load', () => {
-            loadRecentEntries();
-            apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+            try {
+                loadRecentEntries();
+                apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+            } catch (e) {
+                console.warn("localStorage is not available. Features like saving API key and recent entries will be disabled.");
+            }
         });
+
         settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
         cancelSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+        
         saveSettingsBtn.addEventListener('click', () => {
-            localStorage.setItem('geminiApiKey', apiKeyInput.value);
-            const statusEl = document.getElementById('settings-status');
-            statusEl.textContent = 'API 金鑰已儲存！';
-            setTimeout(() => {
+            try {
+                localStorage.setItem('geminiApiKey', apiKeyInput.value);
+                const statusEl = document.getElementById('settings-status');
+                statusEl.textContent = 'API 金鑰已儲存！';
+                setTimeout(() => {
+                    settingsModal.classList.add('hidden');
+                    statusEl.textContent = ''; 
+                }, 1500);
+            } catch (e) {
+                alert("瀏覽器不支援儲存功能，金鑰將在關閉頁面後失效。");
+                sessionApiKey = apiKeyInput.value; // Fallback to session variable
                 settingsModal.classList.add('hidden');
-                statusEl.textContent = ''; 
-            }, 1500);
+            }
         });
+
         receiptUpload.addEventListener('change', () => { fileNameDisplay.textContent = receiptUpload.files.length > 0 ? `已選擇檔案: ${receiptUpload.files[0].name}` : ''; });
         processBtn.addEventListener('click', handleAIProcess);
         manualEntryBtn.addEventListener('click', handleManualEntry);
@@ -155,7 +168,13 @@
 
         // Functions
         async function handleAIProcess() {
-            const apiKey = localStorage.getItem('geminiApiKey');
+            let apiKey = '';
+            try {
+                apiKey = localStorage.getItem('geminiApiKey');
+            } catch (e) {
+                apiKey = sessionApiKey;
+            }
+
             if (!apiKey) {
                 showError('請先點擊右上角的設定按鈕，輸入你的 Google AI Studio API 金鑰。');
                 return;
@@ -221,52 +240,60 @@
         }
 
         function addEntryToRecentList(data) {
-            const entryDiv = document.createElement('div');
-            entryDiv.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center entry-item';
-            entryDiv.innerHTML = `
-                <div>
-                    <p class="font-semibold">${data.storeName || '無標題'}</p>
-                    <p class="text-xs text-gray-400">${data.date} - ${data.category}</p>
-                </div>
-                <p class="font-semibold text-lg">${data.currency} ${data.foreignTotal}</p>
-            `;
-            recentEntriesList.prepend(entryDiv);
-            saveRecentEntries();
-        }
-
-        function saveRecentEntries() {
-            const entries = [];
-            document.querySelectorAll('#recent-entries-list .entry-item').forEach(item => {
-                entries.push({
-                    storeName: item.querySelector('p:first-child').textContent,
-                    details: item.querySelector('.text-xs').textContent,
-                    amount: item.querySelector('.text-lg').textContent,
-                });
-            });
-            localStorage.setItem('travelEntries', JSON.stringify(entries.slice(0, 20)));
-        }
-
-        function loadRecentEntries() {
-            const entries = JSON.parse(localStorage.getItem('travelEntries') || '[]');
-            recentEntriesList.innerHTML = '';
-            entries.forEach(data => {
+            try {
                 const entryDiv = document.createElement('div');
                 entryDiv.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center entry-item';
                 entryDiv.innerHTML = `
                     <div>
-                        <p class="font-semibold">${data.storeName}</p>
-                        <p class="text-xs text-gray-400">${data.details}</p>
+                        <p class="font-semibold">${data.storeName || '無標題'}</p>
+                        <p class="text-xs text-gray-400">${data.date} - ${data.category}</p>
                     </div>
-                    <p class="font-semibold text-lg">${data.amount}</p>
+                    <p class="font-semibold text-lg">${data.currency} ${data.foreignTotal}</p>
                 `;
-                recentEntriesList.appendChild(entryDiv);
-            }
+                recentEntriesList.prepend(entryDiv);
+                saveRecentEntries();
+            } catch (e) { /* localStorage not available, do nothing */ }
+        }
+
+        function saveRecentEntries() {
+             try {
+                const entries = [];
+                document.querySelectorAll('#recent-entries-list .entry-item').forEach(item => {
+                    entries.push({
+                        storeName: item.querySelector('p:first-child').textContent,
+                        details: item.querySelector('.text-xs').textContent,
+                        amount: item.querySelector('.text-lg').textContent,
+                    });
+                });
+                localStorage.setItem('travelEntries', JSON.stringify(entries.slice(0, 20)));
+            } catch (e) { /* localStorage not available, do nothing */ }
+        }
+
+        function loadRecentEntries() {
+            try {
+                const entries = JSON.parse(localStorage.getItem('travelEntries') || '[]');
+                recentEntriesList.innerHTML = '';
+                entries.forEach(data => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center entry-item';
+                    entryDiv.innerHTML = `
+                        <div>
+                            <p class="font-semibold">${data.storeName}</p>
+                            <p class="text-xs text-gray-400">${data.details}</p>
+                        </div>
+                        <p class="font-semibold text-lg">${data.amount}</p>
+                    `;
+                    recentEntriesList.appendChild(entryDiv);
+                });
+            } catch (e) { /* localStorage not available, do nothing */ }
         }
         
         function clearHistory() {
-            if (window.confirm('確定要清除所有本地記錄嗎？(Google Sheet 上的資料不會被刪除)')) {
+            try {
                 localStorage.removeItem('travelEntries');
                 loadRecentEntries();
+            } catch (e) {
+                alert('瀏覽器不支援儲存功能，無法清除歷史記錄。');
             }
         }
 
@@ -274,7 +301,11 @@
             loading.classList.add('hidden');
             inputSelectionSection.classList.add('hidden');
             resultSection.classList.add('hidden');
-            recentEntriesSection.classList.add('hidden');
+            
+            const recentEntriesSection = document.getElementById('recent-entries-section');
+            if (recentEntriesSection) {
+                recentEntriesSection.classList.add('hidden');
+            }
 
             if (view === 'loading') {
                 loading.classList.remove('hidden');
@@ -282,7 +313,9 @@
                 resultSection.classList.remove('hidden');
             } else { // 'input' view
                 inputSelectionSection.classList.remove('hidden');
-                recentEntriesSection.classList.remove('hidden');
+                if (recentEntriesSection) {
+                    recentEntriesSection.classList.remove('hidden');
+                }
             }
         }
 
