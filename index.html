@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>旅行票據記錄器 (相機優化版)</title>
+    <title>旅行票據記錄器 (最終部署版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -40,8 +40,7 @@
                 <label class="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 btn">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     <span>選擇或拍攝照片</span>
-                    <!-- ***** 這裏是唯一的修改 ***** -->
-                    <input id="receipt-upload" type="file" class="hidden" accept="image/*" capture="environment">
+                    <input id="receipt-upload" type="file" class="hidden" accept="image/*">
                 </label>
                 <p id="file-name" class="text-xs text-gray-400 mt-2 text-center"></p>
             </div>
@@ -261,11 +260,10 @@
                     <p class="font-semibold text-lg">${data.amount}</p>
                 `;
                 recentEntriesList.appendChild(entryDiv);
-            });
+            }
         }
         
         function clearHistory() {
-            // Replaced confirm() with a non-blocking approach if needed, but for this simple case it's fine.
             if (window.confirm('確定要清除所有本地記錄嗎？(Google Sheet 上的資料不會被刪除)')) {
                 localStorage.removeItem('travelEntries');
                 loadRecentEntries();
