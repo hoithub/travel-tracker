@@ -36,12 +36,21 @@
         <!-- 輸入選擇區 -->
         <div id="input-selection-section" class="bg-gray-700 p-6 rounded-xl space-y-4">
             <div>
-                <label for="receipt-upload" class="block text-sm font-medium text-gray-300 mb-2">選項一：AI 自動掃描</label>
-                <label class="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    <span>選擇或拍攝照片</span>
-                    <input id="receipt-upload" type="file" class="hidden" accept="image/*">
-                </label>
+                <label class="block text-sm font-medium text-gray-300 mb-2">選項一：AI 自動掃描</label>
+                <div class="flex space-x-2">
+                    <!-- Camera Button -->
+                    <label class="w-1/2 flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
+                        <span>拍攝照片</span>
+                        <input id="camera-input" type="file" class="hidden" accept="image/*" capture="environment">
+                    </label>
+                    <!-- Album Button -->
+                    <label class="w-1/2 flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg cursor-pointer hover:bg-indigo-700 btn">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>
+                        <span>從相簿選取</span>
+                        <input id="album-input" type="file" class="hidden" accept="image/*">
+                    </label>
+                </div>
                 <p id="file-name" class="text-xs text-gray-400 mt-2 text-center"></p>
             </div>
             <button id="process-btn" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 btn">開始 AI 分析</button>
@@ -116,7 +125,8 @@
         const backBtn = document.getElementById('back-btn');
         const loading = document.getElementById('loading');
         const resultSection = document.getElementById('result-section');
-        const receiptUpload = document.getElementById('receipt-upload');
+        const cameraInput = document.getElementById('camera-input');
+        const albumInput = document.getElementById('album-input');
         const fileNameDisplay = document.getElementById('file-name');
         const generalStatus = document.getElementById('general-status');
         const formTitle = document.getElementById('form-title');
@@ -128,6 +138,7 @@
 
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygMu4YZ3r9E2m9CVyp3NNk4lGdhMaBCn04OQ8FP_fJWG_PfE_E7hE-ETY8lMXUKRWk6g/exec";
         let sessionApiKey = ''; // Fallback for localStorage errors
+        let selectedFile = null; // Variable to hold the selected file
 
         // Event Listeners
         window.addEventListener('load', () => {
@@ -136,7 +147,7 @@
                 apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
             } catch (e) {
                 console.warn("localStorage is not available. Features like saving API key and recent entries will be disabled.");
-                recentEntriesSection.classList.add('hidden'); // Hide recent entries if not supported
+                recentEntriesSection.classList.add('hidden');
             }
         });
 
@@ -163,7 +174,16 @@
             }
         });
 
-        receiptUpload.addEventListener('change', () => { fileNameDisplay.textContent = receiptUpload.files.length > 0 ? `已選擇檔案: ${receiptUpload.files[0].name}` : ''; });
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                fileNameDisplay.textContent = `已選擇檔案: ${file.name}`;
+            }
+        }
+        cameraInput.addEventListener('change', handleFileSelect);
+        albumInput.addEventListener('change', handleFileSelect);
+
         processBtn.addEventListener('click', handleAIProcess);
         manualEntryBtn.addEventListener('click', handleManualEntry);
         backBtn.addEventListener('click', goBack);
@@ -185,8 +205,8 @@
                 showError('請先點擊右上角的設定按鈕，輸入你的 Google AI Studio API 金鑰。');
                 return;
             }
-            const imageFile = receiptUpload.files[0];
-            if (!imageFile) { showError('請先上傳一張票據照片。'); return; }
+            const imageFile = selectedFile;
+            if (!imageFile) { showError('請先拍攝或選擇一張票據照片。'); return; }
             hideError();
             showView('loading');
             try {
@@ -330,7 +350,9 @@
                 form.querySelectorAll('input, textarea, select').forEach(el => el.value = '');
             }
             fileNameDisplay.textContent = '';
-            receiptUpload.value = '';
+            selectedFile = null;
+            cameraInput.value = '';
+            albumInput.value = '';
             uploadStatus.innerHTML = '';
         }
         
@@ -380,7 +402,7 @@
             return new Promise((resolve, reject) => { 
                 const reader = new FileReader(); 
                 reader.readAsDataURL(file); 
-                reader.onload = () => resolve(reader.result.split(',')[1]); // Corrected this line
+                reader.onload = () => resolve(reader.result.split(',')[1]);
                 reader.onerror = error => reject(error); 
             }); 
         }
